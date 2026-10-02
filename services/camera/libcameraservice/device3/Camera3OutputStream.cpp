@@ -551,6 +551,11 @@ status_t Camera3OutputStream::configureConsumerQueueLocked(bool allowPreviewResp
     mTraceFirstBuffer = true;
 
     ALOG_ASSERT(mConsumer != 0, "mConsumer should never be NULL");
+    if (mConsumer == 0) {
+        ALOGE("%s: mConsumer is NULL for stream %d (legacy HAL / slow surface), aborting configure",
+                __FUNCTION__, mId);
+        return NO_INIT;
+    }
 
     // Configure consumer-side ANativeWindow interface. The listener may be used
     // to notify buffer manager (if it is used) of the returned buffers.

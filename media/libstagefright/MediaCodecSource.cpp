@@ -534,15 +534,20 @@ status_t MediaCodecSource::initEncoder() {
                 ((mFlags & FLAG_PREFER_SOFTWARE_CODEC) ? MediaCodecList::kPreferSoftwareCodecs : 0),
                 &matchingCodecs);
 
+        ALOGI("MediaCodecSource: findMatchingCodecs for %s found %zu codecs",
+              outputMIME.c_str(), matchingCodecs.size());
+
         for (size_t ix = 0; ix < matchingCodecs.size(); ++ix) {
+            ALOGI("MediaCodecSource: candidate %zu: %s", ix, matchingCodecs[ix].c_str());
             mEncoder = MediaCodec::CreateByComponentName(
                     mCodecLooper, matchingCodecs[ix]);
 
             if (mEncoder == NULL) {
+                ALOGE("MediaCodecSource: CreateByComponentName failed for %s", matchingCodecs[ix].c_str());
                 continue;
             }
 
-            ALOGV("output format is '%s'", mOutputFormat->debugString(0).c_str());
+            ALOGI("MediaCodecSource: output format is '%s'", mOutputFormat->debugString(0).c_str());
 
             mEncoderActivityNotify = new AMessage(kWhatEncoderActivity, mReflector);
             mEncoder->setCallback(mEncoderActivityNotify);
@@ -554,8 +559,10 @@ status_t MediaCodecSource::initEncoder() {
                         MediaCodec::CONFIGURE_FLAG_ENCODE);
 
             if (err == OK) {
+                ALOGI("MediaCodecSource: configure succeeded on %s", matchingCodecs[ix].c_str());
                 break;
             }
+            ALOGE("MediaCodecSource: configure failed on %s: %d", matchingCodecs[ix].c_str(), err);
             mEncoder->release();
             mEncoder = NULL;
         }

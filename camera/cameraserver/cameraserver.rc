@@ -1,4 +1,5 @@
 service cameraserver /system/bin/cameraserver
+    setenv LD_PRELOAD /system/lib/libshims_camera.so
     class main
     user cameraserver
     group audio camera input drmrpc

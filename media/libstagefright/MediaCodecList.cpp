@@ -211,8 +211,9 @@ MediaCodecList::MediaCodecList(std::vector<MediaCodecListBuilderBase*> builders)
             continue;
         }
         auto currentCheck = builder->buildMediaCodecList(&writer);
+        ALOGI("MediaCodecList: builder %p buildMediaCodecList returned %d", builder, currentCheck);
         if (currentCheck != OK) {
-            ALOGD("ignored failed builder");
+            ALOGW("ignored failed builder %p (err=%d)", builder, currentCheck);
             continue;
         } else {
             mInitCheck = currentCheck;
@@ -220,6 +221,7 @@ MediaCodecList::MediaCodecList(std::vector<MediaCodecListBuilderBase*> builders)
     }
     writer.writeGlobalSettings(mGlobalSettings);
     writer.writeCodecInfos(&mCodecInfos);
+    ALOGI("MediaCodecList: total codecs in mCodecInfos = %zu", mCodecInfos.size());
     std::stable_sort(
             mCodecInfos.begin(),
             mCodecInfos.end(),
@@ -361,8 +363,12 @@ void MediaCodecList::findMatchingCodecs(
 
     const sp<IMediaCodecList> list = getInstance();
     if (list == nullptr) {
+        ALOGE("MediaCodecList: getInstance returned nullptr!");
         return;
     }
+
+    ALOGI("MediaCodecList: findMatchingCodecs(mime=%s, encoder=%d): total codecs in list = %zu",
+          mime, encoder, list->countCodecs());
 
     size_t index = 0;
     for (;;) {
@@ -379,20 +385,21 @@ void MediaCodecList::findMatchingCodecs(
         CHECK(info != nullptr);
 
         AString componentName = info->getCodecName();
+        ALOGI("MediaCodecList: found candidate codec '%s'", componentName.c_str());
 
         if (!codecHandlesFormat(mime, info, format)) {
-            ALOGV("skipping codec '%s' which doesn't satisfy format %s",
-                  componentName.c_str(), format->debugString(2).c_str());
+            ALOGI("MediaCodecList: skipping codec '%s' which doesn't satisfy format %s",
+                  componentName.c_str(), format ? format->debugString(2).c_str() : "(null)");
             continue;
         }
 
         if ((flags & kHardwareCodecsOnly) && isSoftwareCodec(componentName)) {
-            ALOGV("skipping SW codec '%s'", componentName.c_str());
+            ALOGI("MediaCodecList: skipping SW codec '%s'", componentName.c_str());
             continue;
         }
 
         matches->push(componentName);
-        ALOGV("matching '%s'", componentName.c_str());
+        ALOGI("MediaCodecList: accepted matching '%s'", componentName.c_str());
     }
 
     if (flags & kPreferSoftwareCodecs ||
