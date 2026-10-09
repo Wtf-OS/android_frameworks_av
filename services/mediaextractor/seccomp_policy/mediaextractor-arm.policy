@@ -62,3 +62,7 @@ _llseek: 1
 
 @include /apex/com.android.media/etc/seccomp_policy/crash_dump.arm.policy
 @include /apex/com.android.media/etc/seccomp_policy/code_coverage.arm.policy
+
+# Mainline uses memfd instead of the removed ashmem driver.
+memfd_create: 1
+ftruncate64: 1
