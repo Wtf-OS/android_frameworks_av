@@ -305,42 +305,37 @@ status_t Camera3OutputStream::fixUpHidlJpegBlobHeader(ANativeWindowBuffer* anwBu
         return res;
     }
 
-    uint8_t *hidlHeaderStart =
-            static_cast<uint8_t*>(mapped) + graphicBuffer->getWidth() - sizeof(camera_jpeg_blob_t);
-    // Check that the jpeg buffer is big enough to contain HIDL camera blob
-    if (hidlHeaderStart < static_cast<uint8_t *>(mapped)) {
-        ALOGE("%s, jpeg buffer not large enough to fit HIDL camera blob %" PRIu32, __FUNCTION__,
-                graphicBuffer->getWidth());
+    const uint32_t bufferSize = graphicBuffer->getWidth();
+    if (bufferSize < sizeof(camera_jpeg_blob_t) || bufferSize < sizeof(CameraBlob)) {
+        ALOGE("%s: JPEG buffer too small for blob headers: %" PRIu32,
+                __FUNCTION__, bufferSize);
         return BAD_VALUE;
     }
-    camera_jpeg_blob_t *hidlBlobHeader = reinterpret_cast<camera_jpeg_blob_t *>(hidlHeaderStart);
+
+    uint8_t *hidlHeaderStart =
+            static_cast<uint8_t*>(mapped) + bufferSize - sizeof(camera_jpeg_blob_t);
+    camera_jpeg_blob_t hidlBlobHeader;
+    memcpy(&hidlBlobHeader, hidlHeaderStart, sizeof(hidlBlobHeader));
 
     // Check that the blob is indeed the jpeg blob id.
-    if (hidlBlobHeader->jpeg_blob_id != CAMERA_JPEG_BLOB_ID) {
-        ALOGE("%s, jpeg blob id %d is not correct", __FUNCTION__, hidlBlobHeader->jpeg_blob_id);
+    if (hidlBlobHeader.jpeg_blob_id != CAMERA_JPEG_BLOB_ID) {
+        ALOGE("%s, jpeg blob id %d is not correct", __FUNCTION__, hidlBlobHeader.jpeg_blob_id);
         return BAD_VALUE;
     }
 
     // Retrieve id and blob size
-    CameraBlobId blobId = static_cast<CameraBlobId>(hidlBlobHeader->jpeg_blob_id);
-    uint32_t blobSizeBytes = hidlBlobHeader->jpeg_size;
+    CameraBlobId blobId = static_cast<CameraBlobId>(hidlBlobHeader.jpeg_blob_id);
+    uint32_t blobSizeBytes = hidlBlobHeader.jpeg_size;
 
-    if (blobSizeBytes > (graphicBuffer->getWidth() - sizeof(camera_jpeg_blob_t))) {
+    if (blobSizeBytes > (bufferSize - sizeof(camera_jpeg_blob_t))) {
         ALOGE("%s, blobSize in HIDL jpeg blob : %d is corrupt, buffer size %" PRIu32, __FUNCTION__,
                   blobSizeBytes, graphicBuffer->getWidth());
     }
 
     uint8_t *aidlHeaderStart =
-            static_cast<uint8_t*>(mapped) + graphicBuffer->getWidth() - sizeof(CameraBlob);
+            static_cast<uint8_t*>(mapped) + bufferSize - sizeof(CameraBlob);
 
-    // Check that the jpeg buffer is big enough to contain AIDL camera blob
-    if (aidlHeaderStart < static_cast<uint8_t *>(mapped)) {
-        ALOGE("%s, jpeg buffer not large enough to fit AIDL camera blob %" PRIu32, __FUNCTION__,
-                graphicBuffer->getWidth());
-        return BAD_VALUE;
-    }
-
-    if (static_cast<uint8_t*>(mapped) + blobSizeBytes > aidlHeaderStart) {
+    if (blobSizeBytes > bufferSize - sizeof(CameraBlob)) {
         ALOGE("%s, jpeg blob with size %d , buffer size %" PRIu32 " not large enough to fit"
                 " AIDL camera blob without corrupting jpeg", __FUNCTION__, blobSizeBytes,
                 graphicBuffer->getWidth());
@@ -353,7 +348,6 @@ status_t Camera3OutputStream::fixUpHidlJpegBlobHeader(ANativeWindowBuffer* anwBu
             .blobSizeBytes = static_cast<int32_t>(blobSizeBytes)
     };
     memcpy(aidlHeaderStart, &aidlHeader, sizeof(CameraBlob));
-    graphicBuffer->unlock();
     return OK;
 }
 

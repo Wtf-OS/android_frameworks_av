@@ -161,7 +161,7 @@ public:
 
         status_t res = OK;
         if (!_locked) {
-            status_t res =  _buffer->lockAsync(usage, dstBuffer, fenceFd);
+            res = _buffer->lockAsync(usage, dstBuffer, fenceFd);
             if (res == OK) {
                 _locked = true;
             }

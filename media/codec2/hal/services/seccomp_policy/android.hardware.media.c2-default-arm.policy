@@ -84,3 +84,6 @@ geteuid32: 1
 getgid32: 1
 getegid32: 1
 getgroups32: 1
+
+# V4L2 poll interruption uses a nonblocking eventfd.
+eventfd2: 1
